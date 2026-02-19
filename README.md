@@ -1,7 +1,7 @@
 # WeiCloth
 
 ### 1. Levantar el Backend Core (Go)
-En la **primera terminal** (ubicado en la carpeta donde están los archivos `.go`), ejecuta:
+En la **primera terminal** (ubicado en la carpeta donde están los archivos `.go`):
 ```bash
 go run main.go handlers.go models.go
 ```
