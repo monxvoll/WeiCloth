@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>WeiCloth</title>
+    <style>
+        /* Basic styling */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f4f4f4; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        button { cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; }
+        input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 60%; }
+    </style>
+</head>
+<body>
+    <h1>Inventario</h1>
+    
+    <div class="box">
+        <h3>Añadir Prenda</h3>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="imgName" placeholder="Ej: pantalon_azul.jpg">
+            <button onclick="addCloth()" style="background: #3b82f6; color: white;">Analizar y Guardar</button>
+        </div>
+    </div>
+
+    <div class="box">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Closet</h3>
+            <button onclick="loadClothes()" style="background: #10b981; color: white;">Refrescar </button>
+        </div>
+        <div id="list" style="margin-top: 15px;"></div>
+    </div>
+
+    <script>
+        // Backend endpoint
+        const API_URL = 'http://localhost:8080';
+
+        // GET: Fetch and display clothes
+        async function loadClothes() {
+            try {
+                // Fetch data from Go backend
+                const res = await fetch(`${API_URL}/clothes`);
+                const data = await res.json();
+                const list = document.getElementById('list');
+                
+                // Generate HTML for each item
+                const htmlItems = data.map(item => `
+                    <div class="item">
+                        <div>
+                            <b>#${item.id}</b> 
+                            <span style="color: #555;">${item.image}</span> 
+                            
+                            <br>
+                            <small style="color:#999">Ref: ${item.category}</small>
+
+                            ${item.style ? `<small style="color:#0284c7; margin-left: 5px;">(${item.style})</small>` : ''}
+                        </div>
+                        
+                        <button onclick="updateCloth(${item.id})" style="background: #f59e0b; color: white;">Editar</button>
+                    </div>
+                `).join('');
+
+                // Render list or show empty message
+                list.innerHTML = htmlItems || '<p>No hay ropa aún.</p>';
+
+            } catch (error) {
+                console.error("Error cargando:", error);
+                document.getElementById('list').innerHTML = '<p style="color:red">Error al conectar con el servidor Go.</p>';
+            }
+        }
+
+        // POST: Send new cloth to backend
+        async function addCloth() {
+            const input = document.getElementById('imgName');
+            const img = input.value;
+            
+            // Validate input
+            if(!img) return alert("Escribe un nombre de imagen");
+
+            // Set loading state on button
+            const btn = document.querySelector("button[onclick='addCloth()']");
+            const originalText = btn.innerText;
+            btn.innerText = "Procesando con IA...";
+            btn.disabled = true;
+
+            try {
+                // Send POST request
+                await fetch(`${API_URL}/add`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ image: img })
+                });
+                
+                // Clear input and reload list
+                input.value = '';
+                loadClothes(); 
+            } catch (error) {
+                alert("Error al guardar");
+            } finally {
+                // Restore button state
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // UPDATE: Edit item category
+        async function updateCloth(id) {
+            // Ask user for new data
+            const newCat = prompt("Nueva categoría:");
+            if(!newCat) return;
+
+            // Send PUT request
+            await fetch(`${API_URL}/update?id=${id}`, {
+                method: 'PUT', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ category: newCat })
+            });
+            
+            // Reload list to show changes
+            loadClothes();
+        }
+
+        // Initial load when page opens
+        loadClothes();
+    </script>
+</body>
+</html>
