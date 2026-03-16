@@ -3,27 +3,17 @@
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as Client Service (Flutter)
-    participant Cog as AWS Cognito
-    participant L as Lambda (Post Confirmation)
-    participant A as AWS Aurora
+    participant Client as HTTP Client
+    participant Go as Server GO
+    participant KC as Keycloak
+    participant DB as DB / Aurora
 
-    C->>Cog: signUp / confirmSignUp()
-    activate Cog
-    Note over Cog: Creates User & generates "sub"
+    Note over Client, DB: (Sign-Up)
     
-    Cog->>L: Invoke Trigger (JSON event with sub)
-    activate L
-    L->>L: buildInsertQuery()
-    L->>A: execute SQL(Insert User)
-    activate A
-    A->>A: save data
-    A-->>L: db response OK
-    deactivate A
-    
-    L-->>Cog: return event (Success)
-    deactivate L
-    
-    Cog-->>C: Registration OK
-    deactivate Cog
+    Client->>Go: POST /register (payload)
+    Go->>KC: Create user (user, password)
+    KC-->>Go: Return payload (includes generated UID)
+    Go->>DB: INSERT (Metadata and UID)
+    DB-->>Go: Save success
+    Go-->>Client: Response OK (201 Created)
 ```
