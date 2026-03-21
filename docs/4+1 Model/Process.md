@@ -24,24 +24,28 @@ sequenceDiagram
     end
 ```
 
-### Auth Module
+### JWT Session Verification Flow
 
 ```mermaid
 sequenceDiagram
-    participant U as User/Client
-    participant A as Auth-Middleware
-    participant AWS as AWS Cognito
+    participant Client as User / Client
+    participant Go as Server GO
+    participant KC as Keycloak
 
-    U->>A: verify-session (JWT)
-    activate A
-    A->>AWS: validate-token (JWT)
-    activate AWS
-    Note over AWS: Verifies Signature & TTL
-    AWS-->>A: identity-confirmed (Payload)
-    deactivate AWS
-    A->>A: check-internal-permissions
-    A-->>U: authorization-granted
-    deactivate A
+    Note over Client, KC: JWT Session Verification Flow
+
+    Client->>Go: Request with JWT
+    
+    %% Flujo de introspección dibujado por el usuario
+    Go->>KC: Validate JWT 
+    KC-->>Go: Authorization Status
+    
+    %% Bloque condicional obligatorio en UML
+    alt JWT is Valid
+        Go-->>Client: 200 OK
+    else JWT is Invalid/Expired
+        Go-->>Client: 401 Unauthorized
+    end
 ```
 ### Recomendation Module
 
