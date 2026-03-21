@@ -1,3 +1,29 @@
+### Login Module
+
+```mermaid
+sequenceDiagram
+    participant Client as HTTP Client
+    participant Go as Backend GO
+    participant KC as Keycloak
+    participant Kafka as Kafka
+    participant DB as Aurora
+
+    Client->>Go: Credentials
+    Go->>KC: Auth Request
+    KC-->>Go: Payload
+    
+    Go->>Go: Success Verification
+    
+    alt Verification Failed
+        Go-->>Client: 401 Unauthorized
+    else Verification Successful
+        Go->>Kafka: Request Metadata
+        Go->>DB: Request Metadata
+        DB-->>Go: Metadata Response
+        Go-->>Client: 200 OK
+    end
+```
+
 ### Auth Module
 
 ```mermaid
