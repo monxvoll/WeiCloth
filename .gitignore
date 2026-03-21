@@ -219,10 +219,10 @@ __marimo__/
 main
 
 # Compiled output
-**/dist/
-**/tmp/
-**/out-tsc/
-**/bazel-out/
+dist/
+tmp/
+out-tsc/
+bazel-out/
 
 # Node
 node_modules/
@@ -239,17 +239,17 @@ yarn-error.log
 *.sublime-workspace
 
 # Visual Studio Code
-**/.vscode/
-.history/*
+.vscode/
+.history/
 
 # Miscellaneous
-**/.angular/cache/
+.angular/cache/
 .sass-cache/
-**/connect.lock
-**/coverage/
-/libpeerconnection.log
+connect.lock
+coverage/
+libpeerconnection.log
 testem.log
-**/typings
+typings/
 __screenshots__/
 
 # System files
