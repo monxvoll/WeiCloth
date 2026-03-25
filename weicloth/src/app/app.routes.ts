@@ -13,5 +13,11 @@ export const routes: Routes = [
         import('./clothes/clothes-module')
         .then(m=>m.ClothesModule)
 
+    },
+    {
+        path: 'recomendation',
+        loadChildren: () => 
+        import('./recomendation/recomendation-module')
+        .then(m => m.RecomendationModule)
     }
 ];
