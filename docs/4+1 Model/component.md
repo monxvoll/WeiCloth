@@ -12,22 +12,22 @@ flowchart LR
     style Infrastructure fill:transparent,stroke:#666,stroke-width:2px,stroke-dasharray: 5 5
 
     %% Actores/Clientes
-    Client(["HTTP Client\n(Postman / Consumer)"]) 
+    Client(["HTTP Client (Postman / Consumer)"]) 
     style Client fill:transparent,stroke:#333,stroke-width:2px
 
     %% Componentes Principales
     subgraph CoreSystem ["Core System"]
-        GoAPI["«component»\nWeiCloth Core API (Go)"]
-        PythonML["«component»\nAI Classifier Service (Python)"]
+        GoAPI["«component» WeiCloth Core API (Go)"]
+        PythonML["«component» AI Classifier Service (Python)"]
     end
     class GoAPI,PythonML comp;
 
     %% Infraestructura y Servicios Externos
     subgraph Infrastructure ["External Infrastructure"]
-        KC["«component»\nKeycloak IAM"]
-        Kafka["«component»\nKafka Broker"]
-        DB["«component»\nAWS Aurora"]
-        S3["«component»\nAWS S3"]
+        KC["«component» Keycloak IAM"]
+        Kafka["«component» Kafka Broker"]
+        DB["«component» AWS Aurora"]
+        S3["«component» AWS S3"]
     end
     class KC,Kafka,DB,S3 ext;
 

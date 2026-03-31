@@ -12,12 +12,12 @@ flowchart TD
    
     subgraph GoWorkspace ["Go Workspace (Backend API)"]
         direction TB
-        Router["cmd/api\n(Entrypoint & Router)"]
-        AuthB["internal/auth\n(Identity & JWT)"]
-        InvB["internal/inventory\n(Business Logic)"]
-        Events["pkg/events\n(Kafka Client)"]
-        DB["internal/database\n(Aurora DB logic)"]
-        Storage["internal/storage\n(S3 Uploads)"]
+        Router["cmd/api (Entrypoint & Router)"]
+        AuthB["internal/auth (Identity & JWT)"]
+        InvB["internal/inventory (Business Logic)"]
+        Events["pkg/events (Kafka Client)"]
+        DB["internal/database (Aurora DB logic)"]
+        Storage["internal/storage (S3 Uploads)"]
         
         Router -. "<<uses>>" .-> AuthB
         Router -. "<<uses>>" .-> InvB
@@ -32,8 +32,8 @@ flowchart TD
    
     subgraph PythonAI ["Python Workspace (AI Service)"]
         direction TB
-        Flask["api\n(Transport Layer)"]
-        ML["core/ml_model\n(Inference)"]
+        Flask["api (Transport Layer)"]
+        ML["core/ml_model (Inference)"]
         
         Flask -. "<<uses>>" .-> ML
     end
@@ -42,10 +42,10 @@ flowchart TD
   
     %% INFRAESTRUCTURA EXTERNA
    
-    KC["Keycloak\n(IAM)"]
-    KafkaCluster["Kafka\n(Event Broker)"]
-    AuroraDB["AWS Aurora\n(RDBMS)"]
-    AWS_S3["AWS S3\n(Object Storage)"]
+    KC["Keycloak (IAM)"]
+    KafkaCluster["Kafka (Event Broker)"]
+    AuroraDB["AWS Aurora (RDBMS)"]
+    AWS_S3["AWS S3 (Object Storage)"]
     class KC,KafkaCluster,AuroraDB,AWS_S3 ext;
 
     
