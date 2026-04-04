@@ -30,6 +30,13 @@ func (m *MockIdentityProvider) ValidateToken(ctx context.Context, token string) 
 	return "mock-uuid-keycloak", nil
 }
 
+func (m *MockIdentityProvider) DeleteUser(ctx context.Context, uid string) error {
+	if m.ShouldFail {
+		return errors.New("mock deletion failed")
+	}
+	return nil
+}
+
 // --- Mock Repository ---
 type MockUserRepository struct {
 	ShouldFail bool

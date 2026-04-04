@@ -21,7 +21,7 @@ type KeycloakAdapter struct {
 	HTTPClient   *http.Client
 }
 
-// KeycloakTokenResponse is a private struct 
+// KeycloakTokenResponse is a private struct
 // to easily extract the JSON data returned by the Keycloak server.
 type keycloakTokenResponse struct {
 	AccessToken string `json:"access_token"`
@@ -29,8 +29,7 @@ type keycloakTokenResponse struct {
 	ErrorDesc   string `json:"error_description"`
 }
 
-
-// keycloakUserRequest represents the JSON structure Keycloak expects 
+// keycloakUserRequest represents the JSON structure Keycloak expects
 // when creating a new user via the Admin API.
 type keycloakUserRequest struct {
 	Username      string               `json:"username"`
@@ -50,10 +49,9 @@ type keycloakCredential struct {
 
 // keycloakUserInfoResponse represents the JSON returned by the UserInfo endpoint.
 type keycloakUserInfoResponse struct {
-	Sub   string `json:"sub"`   
-	Email string `json:"email"` 
+	Sub   string `json:"sub"`
+	Email string `json:"email"`
 }
-
 
 // NewKeycloakAdapter initializes and returns a new instance of KeycloakAdapter.
 // It receives the environment variables needed
@@ -64,11 +62,9 @@ func NewKeycloakAdapter(baseURL, realm, clientID, clientSecret string) *Keycloak
 		Realm:        realm,
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		HTTPClient:   &http.Client{}, 
+		HTTPClient:   &http.Client{},
 	}
 }
-
-
 
 // getAdminToken requests a special token using the Client Credentials flow.
 // This token allows Go API to perform administrative tasks like creating users.
@@ -82,12 +78,12 @@ func (k *KeycloakAdapter) getAdminToken(ctx context.Context) (string, error) {
 	formData.Set("client_secret", k.ClientSecret)
 	formData.Set("grant_type", "client_credentials")
 
-	// 3. Create the HTTP request with the context 
+	// 3. Create the HTTP request with the context
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(formData.Encode()))
 	if err != nil {
 		return "", err
 	}
-	
+
 	// 4. Tell Keycloak we are sending web form data
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -114,9 +110,7 @@ func (k *KeycloakAdapter) getAdminToken(ctx context.Context) (string, error) {
 	return tokenRes.AccessToken, nil
 }
 
-
-
-// CONTRACT IMPLEMENTATION 
+// CONTRACT IMPLEMENTATION
 
 // RegisterUser creates a new user in Keycloak and returns the unique User ID.
 func (k *KeycloakAdapter) RegisterUser(ctx context.Context, username, email, password, firstName, lastName string) (string, error) {
@@ -133,12 +127,12 @@ func (k *KeycloakAdapter) RegisterUser(ctx context.Context, username, email, pas
 		FirstName:     firstName,
 		LastName:      lastName,
 		Enabled:       true,
-		EmailVerified: true, 
+		EmailVerified: true,
 		Credentials: []keycloakCredential{
 			{
 				Type:      "password",
 				Value:     password,
-				Temporary: false, 
+				Temporary: false,
 			},
 		},
 	}
@@ -177,8 +171,6 @@ func (k *KeycloakAdapter) RegisterUser(ctx context.Context, username, email, pas
 	return userID, nil
 }
 
-
-
 // LoginUser authenticates a user and retrieves a JWT access token from Keycloak.
 func (k *KeycloakAdapter) LoginUser(ctx context.Context, email string, password string) (string, error) {
 	// 1. Build the exact Keycloak endpoint URL for requesting tokens
@@ -207,7 +199,7 @@ func (k *KeycloakAdapter) LoginUser(ctx context.Context, email string, password 
 	if err != nil {
 		return "", fmt.Errorf("failed to execute request to Keycloak: %w", err)
 	}
-	defer res.Body.Close() 
+	defer res.Body.Close()
 
 	// 6. Read the raw bytes returned by Keycloak
 	bodyBytes, err := io.ReadAll(res.Body)
@@ -221,7 +213,7 @@ func (k *KeycloakAdapter) LoginUser(ctx context.Context, email string, password 
 		return "", fmt.Errorf("failed to parse Keycloak response: %w", err)
 	}
 
-	// 8. Check if Keycloak rejected the login 
+	// 8. Check if Keycloak rejected the login
 	if res.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("keycloak error (%d): %s - %s", res.StatusCode, tokenRes.Error, tokenRes.ErrorDesc)
 	}
@@ -229,8 +221,6 @@ func (k *KeycloakAdapter) LoginUser(ctx context.Context, email string, password 
 	// 9.  Return the JWT access token
 	return tokenRes.AccessToken, nil
 }
-
-
 
 // ValidateToken receives a JWT string, sends it to Keycloak's userinfo endpoint,
 // and returns the User ID (uid) if the token is valid and active.
@@ -267,4 +257,38 @@ func (k *KeycloakAdapter) ValidateToken(ctx context.Context, token string) (stri
 
 	// 7. Return the unique User ID (Sub)
 	return userInfo.Sub, nil
+}
+
+func (k *KeycloakAdapter) DeleteUser(ctx context.Context, uid string) (err error) {
+	//1. Get admin token
+	adminToken, err := k.getAdminToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get admin token for delete: %w", err)
+	}
+
+	//2. Prepare the endpoint URL for deleting a user
+	endpoint := fmt.Sprintf("%s/admin/realms/%s/users/%s", k.BaseURL, k.Realm, uid)
+
+	//3. Create the HTTP DELETE request
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	//4. Set headers
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+
+	//5. Execute deletion
+	res, err := k.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("network error during registration: %w", err)
+	}
+	defer res.Body.Close()
+
+	//6. Return nil if deletion was successful
+	if res.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("keycloak deletion failed (%d): %s", res.StatusCode, res.Status)
+	}
+
+	return nil
 }
