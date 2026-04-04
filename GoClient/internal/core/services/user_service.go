@@ -54,8 +54,16 @@ func (s *UserService) RegisterUser(ctx context.Context, input domain.RegisterUse
 
 	err = s.userRepository.CreateUser(ctx, userRecord)
 	if err != nil {
-		// TODO: Implement Keycloak rollback for now as per design decision
-		return fmt.Errorf("failed directly in database: %w", err)
+
+		// 1. Catch the error from the delete attempt in Keycloak
+		rollbackErr := s.identityProvider.DeleteUser(ctx, uid)
+
+		// 2. If the deletion failed
+		if rollbackErr != nil {
+			return fmt.Errorf("CRITICAL: db fail (%v), AND keycloak rollback failed, user orphaned! (%v)", err, rollbackErr)
+		}
+		// 3. The deletion was successful
+		return fmt.Errorf("failed directly in database, successfully rolled back keycloak: %w", err)
 	}
 
 	// 3. Publish the success event to the Broker (Kafka)
