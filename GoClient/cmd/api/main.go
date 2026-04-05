@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"weicloth/internal/adapters/iam_keycloak"
+	keycloakAdapter "weicloth/internal/adapters/iam_keycloak"
 
 	kafkaAdapter "weicloth/internal/adapters/event_publisher/kafka"
 
@@ -35,7 +35,7 @@ func main() {
 		log.Fatal("Fatal Error: KEYCLOAK_CLIENT_SECRET is missing. Check your .env file.")
 	}
 
-	keycloak := iam_keycloak.NewKeycloakAdapter(baseURL, realm, clientID, clientSecret)
+	keycloak := keycloakAdapter.NewKeycloakAdapter(baseURL, realm, clientID, clientSecret)
 
 	// ── Kafka ──
 	brokersRaw := os.Getenv("KAFKA_BROKERS")
@@ -91,4 +91,35 @@ func main() {
 	}
 
 	fmt.Println("Flow completed successfully! SubKeycloak mapped, Postgres saved, and Kafka event published.")
+
+	// Update User Flow
+	// 1. Log in reusing the original 'keycloak' variable
+	token, loginErr := keycloak.LoginUser(ctx, testEmail, testPassword)
+	if loginErr != nil {
+		log.Fatalf("Fatal: Could not login to perform update: %v", loginErr)
+	}
+
+	// 2. Extract the secret UID from the Token
+	uid, valErr := keycloak.ValidateToken(ctx, token)
+	if valErr != nil {
+		log.Fatalf("Fatal: Could not decode Token: %v", valErr)
+	}
+
+	fmt.Printf("UID successfully intercepted: %s\n", uid)
+	// 3. Prepare the mutated data
+	updateInput := domain.UpdateUserInput{
+		FirstName: "My New Name",
+		LastName:  "My New Lastname",
+		Nickname:  "superHacker777",
+		DateBirth: time.Date(1999, 9, 9, 0, 0, 0, 0, time.UTC),
+		Gender:    "Apache Helicopter",
+	}
+
+	// 4. Trigger the update to the Orchestrator
+	updateErr := userService.UpdateUser(ctx, uid, updateInput)
+	if updateErr != nil {
+		log.Fatalf("Fatal: Update failed: %v", updateErr)
+	}
+	fmt.Println("SUCCESS: The user has been updated in Postgres and announced in Kafka!")
+
 }
