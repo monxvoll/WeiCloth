@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -59,13 +60,15 @@ func (m *MockUserRepository) UpdateUser(ctx context.Context, user *domain.Update
 
 // --- Mock Event Publisher ---
 type MockEventPublisher struct {
-	PublishedTopic string
-	PublishedKey   string
+	PublishedTopic   string
+	PublishedKey     string
+	PublishedPayload []byte
 }
 
 func (m *MockEventPublisher) Publish(ctx context.Context, topic string, key string, payload []byte) error {
 	m.PublishedTopic = topic
 	m.PublishedKey = key
+	m.PublishedPayload = payload
 	return nil
 }
 
@@ -114,6 +117,14 @@ func TestUserService_RegisterUser_HappyPath(t *testing.T) {
 
 	if mockPub.PublishedTopic != "user.created" {
 		t.Errorf("Expected event topic 'user.created', got %s", mockPub.PublishedTopic)
+	}
+	// Verify payload contains email
+	var payload map[string]string
+	if err := json.Unmarshal(mockPub.PublishedPayload, &payload); err != nil {
+		t.Fatalf("payload not valid JSON: %v", err)
+	}
+	if payload["email"] != input.Email {
+		t.Errorf("expected payload email %s, got %s", input.Email, payload["email"])
 	}
 }
 
@@ -176,6 +187,47 @@ func TestUserService_UpdateUser_HappyPath(t *testing.T) {
 	// 5. Assertions
 	if err != nil {
 		t.Fatalf("Expected strictly no error on happy path, got: %v", err)
+	}
+	// Verify payload contains uid
+	var payload map[string]string
+	if err := json.Unmarshal(mockPub.PublishedPayload, &payload); err != nil {
+		t.Fatalf("payload not valid JSON: %v", err)
+	}
+	if payload["uid"] != mockPub.PublishedKey {
+		t.Errorf("expected payload uid %s, got %s", mockPub.PublishedKey, payload["uid"])
+	}
+}
+
+func TestUserService_LoginUser_HappyPath(t *testing.T) {
+	// Prepare mocks
+	mockIdp := &MockIdentityProvider{ShouldFail: false}
+	mockPub := &MockEventPublisher{}
+
+	// Initialise the service
+	userService := NewUserService(mockIdp, nil, mockPub)
+
+	// Build the login input
+	loginInput := domain.LoginInput{
+		Email:    "ana@example.com",
+		Password: "SuperSecret123",
+	}
+
+	// Execute the method under test
+	token, err := userService.LoginUser(context.Background(), loginInput)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if token != "token" {
+		t.Fatalf("expected token 'token', got %s", token)
+	}
+
+	// Verify that the event was published
+	if mockPub.PublishedTopic != "user.logged_in" {
+		t.Errorf("expected event topic 'user.logged_in', got %s", mockPub.PublishedTopic)
+	}
+
+	if mockPub.PublishedKey != "mock-uuid-keycloak" {
+		t.Errorf("expected event key 'mock-uuid-keycloak', got %s", mockPub.PublishedKey)
 	}
 
 }
