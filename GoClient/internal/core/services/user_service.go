@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 	"weicloth/internal/core/domain"
 	"weicloth/internal/core/ports"
 )
@@ -112,4 +113,36 @@ func (s *UserService) UpdateUser(ctx context.Context, uid string, input domain.U
 	}
 
 	return nil
+}
+
+// LoginUser authenticates a user against the Identity Provider (Keycloak)
+// and returns the JWT token (or an error).
+func (s *UserService) LoginUser(ctx context.Context, input domain.LoginInput) (string, error) {
+
+	//1. Ask Keycloak to generate the token
+	token, err := s.identityProvider.LoginUser(ctx, input.Email, input.Password)
+	if err != nil {
+		return "", fmt.Errorf("login failed in identity provider: %w", err)
+	}
+
+	// Validate token and get UID
+	uid, err := s.identityProvider.ValidateToken(ctx, token)
+	if err != nil {
+		return "", fmt.Errorf("token validation failed: %w", err)
+	}
+
+	//3. Build the event payload
+	eventPayload := map[string]string{
+		"uid":       uid,
+		"email":     input.Email,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	}
+	payloadBytes, _ := json.Marshal(eventPayload)
+
+	//4. Publish the success event to the Broker (Kafka)
+	if err := s.eventPublisher.Publish(ctx, "user.logged_in", uid, payloadBytes); err != nil {
+		fmt.Printf("Warning: login event not published: %v\n", err)
+	}
+
+	return token, nil
 }
