@@ -58,3 +58,25 @@ func (h *HTTPHandler) Register(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"message": "user created"})
 }
+
+// Login handles user login
+func (h *HTTPHandler) Login(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	input := domain.LoginInput{
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
+	token, err := h.userService.LoginUser(c.Request.Context(), input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "user logged in", "token": token})
+}
