@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"weicloth/internal/core/apperrors"
 	"weicloth/internal/core/domain"
 	"weicloth/internal/core/ports"
 )
@@ -26,6 +27,9 @@ func (m *MockIdentityProvider) RegisterUser(ctx context.Context, username, email
 }
 
 func (m *MockIdentityProvider) LoginUser(ctx context.Context, email, password string) (string, error) {
+	if m.ShouldFail {
+		return "", apperrors.ErrInvalidCredentials
+	}
 	return "token", nil
 }
 
@@ -231,4 +235,20 @@ func TestUserService_LoginUser_HappyPath(t *testing.T) {
 		t.Errorf("expected event key 'mock-uuid-keycloak', got %s", mockPub.PublishedKey)
 	}
 
+}
+
+func TestUserService_LoginUser_InvalidCredentials(t *testing.T) {
+	mockIdp := &MockIdentityProvider{ShouldFail: true}
+	userService := NewUserService(mockIdp, nil, &MockEventPublisher{}, slog.Default())
+
+	_, err := userService.LoginUser(context.Background(), domain.LoginInput{
+		Email:    "bad@example.com",
+		Password: "wrong",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, apperrors.ErrInvalidCredentials) {
+		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	}
 }

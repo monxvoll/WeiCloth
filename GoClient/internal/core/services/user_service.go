@@ -130,13 +130,13 @@ func (s *UserService) LoginUser(ctx context.Context, input domain.LoginInput) (s
 	//1. Ask Keycloak to generate the token
 	token, err := s.identityProvider.LoginUser(ctx, input.Email, input.Password)
 	if err != nil {
-		return "", fmt.Errorf("login failed in identity provider: %w", err)
+		return "", fmt.Errorf("login failed: %w", err)
 	}
 
 	// Validate token and get UID
 	uid, err := s.identityProvider.ValidateToken(ctx, token)
 	if err != nil {
-		return "", fmt.Errorf("token validation failed: %w", err)
+		return "", fmt.Errorf("token validation failed after login: %w", err)
 	}
 
 	//3. Build the event payload
